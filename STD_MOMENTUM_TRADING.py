@@ -5,6 +5,7 @@ import numpy as np
 plt.style.use('seaborn')
 
 
+
 class RollingStdAlgo:
 
 
@@ -22,14 +23,14 @@ class RollingStdAlgo:
 
 
            1.) CALCULATE RETURNS OF THE STOCK, LOG of (RETURNS / RETURNS.SHIFT(1))
-           2.) CALCULATE THE EXPONENTIAL MOVING STANDARD DEVIATION OF SPAN = 10 CLOSE PRICE
+           2.) CALCULATE THE EXPONENTIAL MOVING STANDARD DEVIATION OF SPAN = 10 AdjClose PRICE
            3.) NORMALIZE THIS PREVIOUS NUMBER
-           4.) CALCULATE THE SHORT MOVING AVERAGE OF CLOSE PRICES
-           5.) CALCULATE THE LONG MOVING AVERAGE OF CLOSE PRICES
+           4.) CALCULATE THE SHORT MOVING AVERAGE OF AdjClose PRICES
+           5.) CALCULATE THE LONG MOVING AVERAGE OF AdjClose PRICES
            6.) CALCULATE THE MAXIMUM OF THE WINDOW OF THE STANDARDIZED STANDARD DEVIATION
            7.) FIND THE CUMMULATIVE MAX STANDARD DEVIATION OF THE FIRST STANDARD DEVIATION ROLLING WINDOW
            8.) DEFINE THE TRADING SIGNALS
-               a.) IF THE SHORT MOVING AVERAGE OF CLOSE PRICES IS ABOVE THE LONG MOVING AVERAGE OF THE CLOSE PRICES, SIGNAL IS 1
+               a.) IF THE SHORT MOVING AVERAGE OF AdjClose PRICES IS ABOVE THE LONG MOVING AVERAGE OF THE AdjClose PRICES, SIGNAL IS 1
                ELSE SIGNAL IS -1
 
                b.) IF THE LONG ROLLING STD MAX IS EQUAL TO THE CUMULATIVE ROLLING STD MAX, SIGNAL = 1, ELSE SIGNAL = 0
@@ -54,8 +55,9 @@ class RollingStdAlgo:
         for stock in stocks:
             overall_returns = {}
             stock = stock
-            aapl_df_beginning  = web.DataReader(stock.upper(), 'iex', start = '2014-01-01')
+            aapl_df_beginning  = web.DataReader(stock.upper(), 'quandl', start = '2014-01-01')
             aapl_df_beginning.index = pd.to_datetime(aapl_df_beginning.index)
+            aapl_df_beginning = aapl_df_beginning.sort_index()
 
             for x in range(1):
                 returns_dict = {}
@@ -95,13 +97,15 @@ class RollingStdAlgo:
                                 elif self.train_test_split:
                                     aapl = aapl_df.iloc[:train].copy()
 
-                                aapl['returns'] = np.log(aapl['close']/aapl['close'].shift(1))
+                                aapl = aapl.sort_index()
+
+                                aapl['returns'] = np.log(aapl['AdjClose']/aapl['AdjClose'].shift(1))
 
 
-                                aapl['FIRST_ROLLING_STD'] = aapl['close'].ewm(span = first_rolling_std).std()
+                                aapl['FIRST_ROLLING_STD'] = aapl['AdjClose'].ewm(span = first_rolling_std).std()
                                 aapl['STANDARD_STD'] = (aapl['FIRST_ROLLING_STD'] - aapl['FIRST_ROLLING_STD'].mean())/aapl['FIRST_ROLLING_STD'].std()
-                                aapl['ROLLING_LONG'] = aapl['close'].rolling(window = long_rolling).mean()
-                                aapl['ROLLING_SHORT'] = aapl['close'].rolling(window = short_rolling).mean()
+                                aapl['ROLLING_LONG'] = aapl['AdjClose'].rolling(window = long_rolling).mean()
+                                aapl['ROLLING_SHORT'] = aapl['AdjClose'].rolling(window = short_rolling).mean()
 
 
                                 aapl['AVG_STD_MAX'] = aapl['STANDARD_STD'].rolling(window = std_rolling_max).max()
@@ -160,13 +164,13 @@ class RollingStdAlgo:
                 elif self.train_test_split:
                     aapl = aapl_df #.iloc[train:].copy()
 
-                aapl['returns'] = np.log(aapl['close']/aapl['close'].shift(1))
+                aapl['returns'] = np.log(aapl['AdjClose']/aapl['AdjClose'].shift(1))
 
 
-                aapl['FIRST_ROLLING_STD'] = aapl['close'].ewm(span = first_rolling_std).std()
+                aapl['FIRST_ROLLING_STD'] = aapl['AdjClose'].ewm(span = first_rolling_std).std()
                 aapl['STANDARD_STD'] = (aapl['FIRST_ROLLING_STD'] - aapl['FIRST_ROLLING_STD'].mean())/aapl['FIRST_ROLLING_STD'].std()
-                aapl['ROLLING_LONG'] = aapl['close'].rolling(window = long_rolling).mean()
-                aapl['ROLLING_SHORT'] = aapl['close'].rolling(window = short_rolling).mean()
+                aapl['ROLLING_LONG'] = aapl['AdjClose'].rolling(window = long_rolling).mean()
+                aapl['ROLLING_SHORT'] = aapl['AdjClose'].rolling(window = short_rolling).mean()
 
 
                 aapl['AVG_STD_MAX'] = aapl['STANDARD_STD'].rolling(window = std_rolling_max).max()
@@ -214,6 +218,7 @@ class RollingStdAlgo:
 
                 #plt.figure(figsize = (20,5))
                 #aapl[['ROLLING_LONG', 'ROLLING_SHORT']].plot(figsize = (20,5))
+
                 aapl[['STRAT_RETURNS', 'CUM_RETURNS']].plot( figsize = (20,10), title = stock.upper())
 
                 plt.fill_between(aapl.index, aapl['STRAT_RETURNS'], aapl['CUM_RETURNS'],
